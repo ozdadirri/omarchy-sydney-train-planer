@@ -1,0 +1,5 @@
+# Never commit a real API key or local state
+syd-train.json
+config.json
+*.local
+.DS_Store

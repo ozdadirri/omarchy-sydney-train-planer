@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to ~/.local/state/omarchy/settings/syd-train.json OR set these in Setup > Plugins > Sydney Train Planner. Never commit a file containing a real apiKey.",
+  "apiKey": "",
+  "originId": "",
+  "originName": "",
+  "destinationId": "",
+  "destinationName": ""
+}

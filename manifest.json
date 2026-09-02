@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.ozdadirri.sydney-train-planer",
+  "name": "Sydney Train Planner",
+  "version": "0.1.0",
+  "author": "ozdadirri",
+  "license": "MIT",
+  "description": "Plan a Sydney trip from the bar: live stop search, next departures, delays and platforms via the TfNSW Trip Planner API.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Sydney Train Planner",
+    "description": "Bar pill with a trip-planner popup for the Sydney/NSW transport network.",
+    "category": "Info",
+    "aliases": [
+      "train",
+      "trains",
+      "trip",
+      "transport",
+      "sydney",
+      "tfnsw",
+      "opal"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "apiKey": "",
+      "originId": "",
+      "originName": "",
+      "destinationId": "",
+      "destinationName": "",
+      "results": 4,
+      "refreshSeconds": 60
+    },
+    "schema": [
+      { "key": "apiKey", "type": "string", "label": "TfNSW Open Data API key" },
+      { "key": "originName", "type": "string", "label": "Default origin (name)" },
+      { "key": "originId", "type": "string", "label": "Default origin (stop id)" },
+      { "key": "destinationName", "type": "string", "label": "Default destination (name)" },
+      { "key": "destinationId", "type": "string", "label": "Default destination (stop id)" },
+      { "key": "results", "type": "number", "label": "Journeys to show" },
+      { "key": "refreshSeconds", "type": "number", "label": "Auto-refresh interval (seconds)" }
+    ]
+  }
+}
