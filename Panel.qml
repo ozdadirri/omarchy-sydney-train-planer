@@ -215,7 +215,11 @@ Panel {
     tripProc.command = Model.curlArgs(
       Model.tripUrl(originStop.id, destStop.id,
         Qt.formatDate(d, "yyyyMMdd"), Qt.formatTime(d, "HHmm")),
-      apiKey, 10)
+      10)
+    // Written to curl's stdin in tripProc.onStarted, never as an argv
+    // element — see the comment on Model.curlArgs.
+    tripProc.pendingAuth = Model.authConfigStdin(apiKey)
+    tripProc.stdinEnabled = true
     tripProc.running = true
   }
 
@@ -231,9 +235,19 @@ Panel {
     id: stopProc
     property string pending: ""
     property string active: ""
+    // See tripProc.pendingAuth below for why this exists and how it's used.
+    property string pendingAuth: ""
+    stdinEnabled: true
+    onStarted: {
+      write(pendingAuth)
+      stdinEnabled = false
+      pendingAuth = ""
+    }
     function fire() {
       active = pending
-      command = Model.curlArgs(Model.stopFinderUrl(active), root.apiKey, 6)
+      command = Model.curlArgs(Model.stopFinderUrl(active), 6)
+      pendingAuth = Model.authConfigStdin(root.apiKey)
+      stdinEnabled = true
       running = true
     }
     stdout: StdioCollector {
@@ -247,6 +261,20 @@ Panel {
 
   Process {
     id: tripProc
+    // Holds the "header = ..." config line between planTrip() queuing it
+    // and onStarted writing it to curl's own stdin — the API key never
+    // becomes an argv element (readable via /proc/<pid>/cmdline or `ps`
+    // for the life of the request). Cleared right after the write.
+    property string pendingAuth: ""
+    stdinEnabled: true
+    onStarted: {
+      write(pendingAuth)
+      // Closing the pipe (EOF) is what tells curl's `-K -` the config is
+      // complete; re-armed on every planTrip() call since this Process
+      // instance is reused for every search.
+      stdinEnabled = false
+      pendingAuth = ""
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

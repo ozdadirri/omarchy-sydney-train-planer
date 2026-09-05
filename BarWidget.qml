@@ -81,7 +81,14 @@ BarWidget {
     tripProc.command = Model.curlArgs(
       Model.tripUrl(originId, destinationId,
         Qt.formatDate(d, "yyyyMMdd"), Qt.formatTime(d, "HHmm")),
-      apiKey, 10)
+      10)
+    // Queued here, written to curl's stdin once the process has actually
+    // started (see tripProc.onStarted) — never as an argv element, which
+    // procfs/`ps` would expose to every other process on the machine.
+    // Re-armed on every call: onStarted disables it again right after the
+    // write to close curl's stdin (EOF), so the next run needs it back on.
+    tripProc.pendingAuth = Model.authConfigStdin(apiKey)
+    tripProc.stdinEnabled = true
     tripProc.running = true
   }
 
@@ -120,6 +127,18 @@ BarWidget {
 
   Process {
     id: tripProc
+    // Holds the "header = ..." config line between refresh() queuing it and
+    // onStarted writing it. Cleared immediately after the write so the key
+    // doesn't linger in QML state any longer than one process lifetime.
+    property string pendingAuth: ""
+    stdinEnabled: true
+    onStarted: {
+      write(pendingAuth)
+      // Closes the stdin pipe (EOF), which is what tells curl's `-K -` the
+      // config is complete and the request can proceed.
+      stdinEnabled = false
+      pendingAuth = ""
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -136,6 +155,9 @@ BarWidget {
     stderr: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
+        // curl's stderr under -fsS is just an error summary (HTTP status,
+        // timeout, DNS failure) — the request URL has no secret in it and
+        // the header itself was never passed on a line curl would echo back.
         var e = String(text || "").trim()
         if (e) root.lastError = e
       }

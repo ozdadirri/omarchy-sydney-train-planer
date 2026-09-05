@@ -49,13 +49,31 @@ function tripUrl(originId, destinationId, yyyymmdd, hhmm) {
 
 // curl argv shared by every request. `-fsS` = fail on HTTP error, silent,
 // still show errors. Short timeouts keep a flaky network from wedging the UI.
-function curlArgs(url, apiKey, maxSeconds) {
+//
+// The API key is deliberately NOT here: process argv (this array) is
+// world-readable via /proc/<pid>/cmdline and `ps`, so a key embedded in a
+// `-H "Authorization: ..."` argument leaks to any other process on the
+// machine for as long as the curl call is running. Instead `-K -` tells
+// curl to read a config file from its own stdin; the caller writes the
+// header there over the pipe (see authConfigStdin below), which is a
+// private fd between Quickshell and the curl child, invisible to procfs
+// and never appears in a process listing or a `qs log`/shell trace.
+function curlArgs(url, maxSeconds) {
   return [
     "curl", "-fsS",
     "--max-time", String(maxSeconds || 8),
-    "-H", "Authorization: apikey " + String(apiKey || ""),
+    "-K", "-",
     url
   ]
+}
+
+// The curl config-file line carrying the Authorization header, fed over
+// stdin (see curlArgs). `header` config values follow the same quoting as
+// curl command-line strings: wrap in double quotes, backslash-escape any
+// backslash or embedded double quote in the key itself.
+function authConfigStdin(apiKey) {
+  var key = String(apiKey || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+  return "header = \"Authorization: apikey " + key + "\"\n"
 }
 
 // ---- stop_finder ----------------------------------------------------------
@@ -287,7 +305,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     stopFinderUrl: stopFinderUrl, tripUrl: tripUrl,
     isCoordId: isCoordId, coordId: coordId,
-    curlArgs: curlArgs, parseStopFinder: parseStopFinder,
+    curlArgs: curlArgs, authConfigStdin: authConfigStdin, parseStopFinder: parseStopFinder,
     parseTrip: parseTrip,
     countdownLabel: countdownLabel, delayLabel: delayLabel,
     punctuality: punctuality, normalizeConfig: normalizeConfig,
